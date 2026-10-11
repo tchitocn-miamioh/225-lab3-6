@@ -12,6 +12,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 checkout([
@@ -61,7 +62,8 @@ pipeline {
         stage('Deploy to Dev Environment') {
             steps {
                 script {
-                    // Update the DEV deployment image tag
+
+                    // Update DEV deployment image tag
                     sh """
                         sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-dev.yaml
                     """
@@ -69,7 +71,7 @@ pipeline {
                     // Deploy to Kubernetes DEV
                     sh 'kubectl apply -f deployment-dev.yaml'
 
-                    // Wait for the DEV deployment to become ready
+                    // Wait for DEV deployment
                     sh 'kubectl rollout status deployment/dev-deployment --timeout=120s'
                 }
             }
@@ -78,17 +80,39 @@ pipeline {
         stage('Check DEV Connectivity') {
             steps {
                 script {
-                    echo 'Checking DEV service connectivity from Jenkins...'
 
-                    // Diagnostic only: do not fail pipeline here
+                    echo '========================================'
+                    echo 'Checking Kubernetes DEV Service'
+                    echo '========================================'
+
+                    // Display DEV service details
+                    sh 'kubectl get service dev-service -o wide'
+
+                    echo '========================================'
+                    echo 'Checking Kubernetes Ingress'
+                    echo '========================================'
+
+                    // Display all Ingress addresses and hosts
+                    sh 'kubectl get ingress -o wide'
+
+                    // Display detailed DEV Ingress configuration
+                    sh 'kubectl describe ingress nginx'
+
+                    echo '========================================'
+                    echo 'Checking DEV Connectivity from Jenkins'
+                    echo '========================================'
+
+                    // Diagnostic only
                     sh '''
                         curl -v --connect-timeout 5 --max-time 10 \
                         "$DEV_URL/" || true
                     '''
 
-                    echo 'Checking DEV service connectivity from Docker...'
+                    echo '========================================'
+                    echo 'Checking DEV Connectivity from Docker'
+                    echo '========================================'
 
-                    // Test network access from a temporary container
+                    // Check from a Docker container
                     sh '''
                         docker run --rm \
                         -e DEV_URL="$DEV_URL" \
@@ -103,13 +127,14 @@ pipeline {
         stage('Run Acceptance Tests') {
             steps {
                 script {
+
                     echo 'Building Selenium test image...'
 
                     sh 'docker build -t qa-tests -f Dockerfile.test .'
 
                     echo 'Running Selenium acceptance tests...'
 
-                    // Test must pass before deploying to PROD
+                    // Selenium must pass before PROD deployment
                     sh 'docker run --rm qa-tests'
                 }
             }
@@ -118,7 +143,8 @@ pipeline {
         stage('Deploy to Prod Environment') {
             steps {
                 script {
-                    // Update the PROD deployment image tag
+
+                    // Update PROD deployment image tag
                     sh """
                         sed -i 's|${DOCKER_IMAGE}:latest|${DOCKER_IMAGE}:${IMAGE_TAG}|' deployment-prod.yaml
                     """
@@ -126,7 +152,7 @@ pipeline {
                     // Deploy to Kubernetes PROD
                     sh 'kubectl apply -f deployment-prod.yaml'
 
-                    // Wait for the PROD deployment to become ready
+                    // Wait for PROD deployment
                     sh 'kubectl rollout status deployment/prod-deployment --timeout=120s'
                 }
             }
@@ -135,9 +161,17 @@ pipeline {
         stage('Check Kubernetes Cluster') {
             steps {
                 script {
+
+                    echo 'Checking Kubernetes Deployments'
                     sh 'kubectl get deployments'
+
+                    echo 'Checking Kubernetes Pods'
                     sh 'kubectl get pods'
+
+                    echo 'Checking Kubernetes Services'
                     sh 'kubectl get services'
+
+                    echo 'Checking Kubernetes Ingress'
                     sh 'kubectl get ingress'
                 }
             }
@@ -145,6 +179,7 @@ pipeline {
     }
 
     post {
+
         success {
             slackSend color: "good",
                 message: "Build Completed: ${env.JOB_NAME} ${env.BUILD_NUMBER}"
