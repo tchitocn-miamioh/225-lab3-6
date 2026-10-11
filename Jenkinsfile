@@ -8,7 +8,7 @@ pipeline {
         IMAGE_TAG = "build-${BUILD_NUMBER}"
         GITHUB_URL = 'https://github.com/tchitocn-miamioh/225-lab3-6.git'
         KUBECONFIG = credentials('tchitocn-225')
-        DEV_URL = 'http://10.43.76.175'
+        DEV_URL = 'http://10.48.229.164'
     }
 
     stages {
