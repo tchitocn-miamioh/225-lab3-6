@@ -12,7 +12,7 @@ spec:
     metadata:
       labels:
         app: nginx
-        owner: tchitocn
+        role: dev
     spec:
       containers:
       - name: nginx
@@ -43,9 +43,10 @@ kind: Service
 metadata:
   name: dev-service
 spec:
+  type: ClusterIP
   selector:
     app: nginx
-    owner: tchitocn
+    role: dev
   ports:
   - protocol: TCP
     port: 80
